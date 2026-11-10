@@ -46,6 +46,17 @@ test('missing file and missing upload give clear errors', async () => {
   assert.strictEqual((await fetch(`${base}/upload`, { method: 'POST' })).status, 400);
 });
 
+test('rejected uploads leave no temp files behind', async () => {
+  const tmp = path.join(os.tmpdir(), 'sonusx32');
+  const form = new FormData();
+  form.append('file', new Blob(['a']), 'a.scn');
+  form.append('file', new Blob(['b']), 'b.scn');
+  form.append('other', new Blob(['c']), 'c.scn');
+  assert.strictEqual((await fetch(`${base}/upload`, { method: 'POST', body: form })).status, 400);
+  await new Promise((r) => setTimeout(r, 50));
+  assert.deepStrictEqual(fs.existsSync(tmp) ? fs.readdirSync(tmp) : [], []);
+});
+
 test('UI is served', async () => {
   assert.match(await (await fetch(base)).text(), /sonusX32/);
 });

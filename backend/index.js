@@ -16,7 +16,8 @@ function filePath(name) {
 const app = express();
 app.use(express.static(path.join(__dirname, 'public')));
 // Temp files keep large recordings out of RAM; utf8 keeps non-ASCII names intact.
-app.use(fileUpload({ useTempFiles: true, tempFileDir: os.tmpdir(), defParamCharset: 'utf8' }));
+// ponytail: no fileSize limit (multitrack WAVs are huge); add limits if exposed beyond the church LAN.
+const uploads = fileUpload({ useTempFiles: true, tempFileDir: path.join(os.tmpdir(), 'sonusx32'), defParamCharset: 'utf8' });
 
 app.get('/list', (req, res) => {
   const files = fs.readdirSync(dir, { withFileTypes: true })
@@ -26,10 +27,10 @@ app.get('/list', (req, res) => {
   res.json(files);
 });
 
-app.post('/upload', async (req, res) => {
+app.post('/upload', uploads, async (req, res) => {
   const file = req.files?.file;
-  if (!file || Array.isArray(file)) return res.status(400).json({ error: 'Send one file in field "file"' });
   try {
+    if (!file || Array.isArray(file)) return res.status(400).json({ error: 'Send one file in field "file"' });
     const dest = filePath(file.name);
     if (!dest) return res.status(400).json({ error: 'Invalid file name' });
     // COPYFILE_EXCL: never overwrite someone else's file (atomic, no check-then-write race).
@@ -40,7 +41,8 @@ app.post('/upload', async (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Upload failed' });
   } finally {
-    fs.promises.rm(file.tempFilePath, { force: true }).catch(() => {});
+    // Remove every temp file, including ones from rejected multi-file or wrong-field requests.
+    for (const f of Object.values(req.files || {}).flat()) fs.promises.rm(f.tempFilePath, { force: true }).catch(() => {});
   }
 });
 

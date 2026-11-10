@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>sonusX32</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+    li { display: flex; gap: .5rem; align-items: center; padding: .25rem 0; }
+    li a { flex: 1; overflow-wrap: anywhere; }
+    #msg { min-height: 1.5em; }
+    .error { color: #b00020; }
+  </style>
+</head>
+<body>
+  <h1>sonusX32</h1>
+  <form id="upload">
+    <input type="file" name="file" required aria-label="File to upload">
+    <button>Upload</button>
+  </form>
+  <p id="msg" role="status"></p>
+  <h2>Files</h2>
+  <ul id="files"></ul>
+
+  <script>
+    const msg = document.getElementById('msg');
+    const show = (text, isError) => { msg.textContent = text; msg.className = isError ? 'error' : ''; };
+
+    async function refresh() {
+      const names = await (await fetch('/list')).json();
+      const ul = document.getElementById('files');
+      ul.replaceChildren(...names.map((name) => {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = '/files/' + encodeURIComponent(name);
+        a.textContent = name;
+        const del = document.createElement('button');
+        del.textContent = 'Delete';
+        del.onclick = async () => {
+          if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+          const r = await fetch('/delete/' + encodeURIComponent(name), { method: 'DELETE' });
+          show(r.ok ? `Deleted ${name}` : (await r.json()).error, !r.ok);
+          refresh();
+        };
+        li.append(a, del);
+        return li;
+      }));
+      if (!names.length) ul.innerHTML = '<li>No files yet.</li>';
+    }
+
+    document.getElementById('upload').onsubmit = async (e) => {
+      e.preventDefault();
+      const r = await fetch('/upload', { method: 'POST', body: new FormData(e.target) });
+      const body = await r.json();
+      show(r.ok ? `Uploaded ${body.fileName}` : body.error, !r.ok);
+      if (r.ok) e.target.reset();
+      refresh();
+    };
+
+    refresh();
+  </script>
+</body>
+</html>

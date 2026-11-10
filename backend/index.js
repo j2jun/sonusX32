@@ -1,36 +1,69 @@
 const express = require('express');
-const cors = require('cors');
 const fileUpload = require('express-fileupload');
-const fileManager = require('./fileManager');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+const dir = path.resolve(process.env.RECORDINGS_DIR || path.join(__dirname, 'recordings'));
+fs.mkdirSync(dir, { recursive: true });
+
+// Plain file names only. Blocks "../x", "a/b", absolute paths and dotfiles.
+function filePath(name) {
+  if (!name || name !== path.basename(name) || name.startsWith('.') || name.includes('\0')) return null;
+  return path.join(dir, name);
+}
 
 const app = express();
-const PORT = process.env.PORT || 5001;
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(fileUpload());
-
-// API Routes
-app.post('/upload', (req, res) => {
-    if (!req.files || !req.files.file) {
-        return res.status(400).send('No file uploaded.');
-    }
-
-    const file = req.files.file;
-    fileManager.saveFile(file.name, file.data);
-    res.send({ message: 'File uploaded successfully', fileName: file.name });
-});
+app.use(express.static(path.join(__dirname, 'public')));
+// Temp files keep big recordings out of RAM; utf8 keeps non-ASCII names intact.
+app.use(fileUpload({ useTempFiles: true, tempFileDir: os.tmpdir(), defParamCharset: 'utf8' }));
 
 app.get('/list', (req, res) => {
-    res.send(fileManager.listFiles());
+  const files = fs.readdirSync(dir, { withFileTypes: true })
+    .filter((d) => d.isFile() && !d.name.startsWith('.'))
+    .map((d) => d.name);
+  res.json(files);
+});
+
+app.post('/upload', async (req, res) => {
+  const file = req.files?.file;
+  if (!file || Array.isArray(file)) return res.status(400).json({ error: 'Send one file in field "file"' });
+  try {
+    const dest = filePath(file.name);
+    if (!dest) return res.status(400).json({ error: 'Invalid file name' });
+    // COPYFILE_EXCL: never overwrite an existing file (atomic, no exists-then-write race).
+    await fs.promises.copyFile(file.tempFilePath, dest, fs.constants.COPYFILE_EXCL);
+    res.status(201).json({ fileName: file.name });
+  } catch (err) {
+    if (err.code === 'EEXIST') return res.status(409).json({ error: `"${file.name}" already exists. Rename it or delete the old one first.` });
+    console.error(err);
+    res.status(500).json({ error: 'Upload failed' });
+  } finally {
+    fs.promises.rm(file.tempFilePath, { force: true }).catch(() => {});
+  }
+});
+
+app.get('/files/:fileName', (req, res) => {
+  const p = filePath(req.params.fileName);
+  if (!p || !fs.existsSync(p)) return res.status(404).json({ error: 'Not found' });
+  res.download(p);
 });
 
 app.delete('/delete/:fileName', (req, res) => {
-    fileManager.deleteFile(req.params.fileName);
-    res.send({ message: 'File deleted successfully' });
+  const p = filePath(req.params.fileName);
+  if (!p) return res.status(400).json({ error: 'Invalid file name' });
+  try {
+    fs.unlinkSync(p);
+    res.json({ message: 'File deleted' });
+  } catch (err) {
+    if (err.code === 'ENOENT') return res.status(404).json({ error: 'Not found' });
+    throw err;
+  }
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-});
+module.exports = app;
+
+if (require.main === module) {
+  const PORT = process.env.PORT || 5001;
+  app.listen(PORT, () => console.log(`sonusX32 running on http://localhost:${PORT} (files in ${dir})`));
+}

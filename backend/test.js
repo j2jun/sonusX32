@@ -26,6 +26,13 @@ test('upload, list, download, delete round trip', async () => {
   assert.deepStrictEqual(await (await fetch(`${base}/list`)).json(), []);
 });
 
+test('non-ASCII file names survive upload, list and download', async () => {
+  const name = '주일예배 Scene.scn';
+  assert.strictEqual((await upload(name, 'scene-k')).status, 201);
+  assert.ok((await (await fetch(`${base}/list`)).json()).includes(name));
+  assert.strictEqual(await (await fetch(`${base}/files/${encodeURIComponent(name)}`)).text(), 'scene-k');
+});
+
 test('upload never overwrites an existing file', async () => {
   await upload('choir.scn', 'ours');
   assert.strictEqual((await upload('choir.scn', 'theirs')).status, 409);

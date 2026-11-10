@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>sonusX32</title>
+  <style>
+    body { font: 16px system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+    li { display: flex; gap: .5rem; align-items: center; padding: .25rem 0; }
+    li a { flex: 1; word-break: break-all; }
+    #msg { min-height: 1.5em; }
+  </style>
+</head>
+<body>
+  <h1>sonusX32</h1>
+  <form id="upload">
+    <label>Recording or scene file <input type="file" name="file" required></label>
+    <button>Upload</button>
+  </form>
+  <p id="msg" role="status"></p>
+  <ul id="files"></ul>
+  <script>
+    const msg = document.getElementById('msg');
+    const list = document.getElementById('files');
+
+    async function refresh() {
+      const files = await (await fetch('/list')).json();
+      list.replaceChildren(...files.map((name) => {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = '/files/' + encodeURIComponent(name);
+        a.textContent = name;
+        const del = document.createElement('button');
+        del.textContent = 'Delete';
+        del.onclick = async () => {
+          if (!confirm(`Delete "${name}"?`)) return;
+          const res = await fetch('/delete/' + encodeURIComponent(name), { method: 'DELETE' });
+          const body = await res.json(); msg.textContent = body.message || body.error;
+          refresh();
+        };
+        li.append(a, del);
+        return li;
+      }));
+      if (!files.length) list.innerHTML = '<li>No files yet.</li>';
+    }
+
+    document.getElementById('upload').onsubmit = async (e) => {
+      e.preventDefault();
+      const res = await fetch('/upload', { method: 'POST', body: new FormData(e.target) });
+      const body = await res.json();
+      msg.textContent = res.ok ? `Uploaded "${body.fileName}"` : body.error;
+      if (res.ok) e.target.reset();
+      refresh();
+    };
+
+    refresh();
+  </script>
+</body>
+</html>

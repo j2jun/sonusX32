@@ -5,6 +5,15 @@ As a sound engineer at my church, I have dealt with issues managing files relate
 
 Therefore, I developed a sound engineering file management platform specialized for the Behringer X32. I named the system **sonusX32**, where **"Sonus" means sound in Latin**, and **"X32"** comes from the Behringer X32 mixer.
 
+## Run it
+Requires Node 18+.
+```sh
+npm install
+npm start      # http://localhost:5001 (PORT and RECORDINGS_DIR are configurable)
+npm test
+```
+**Implemented today:** upload, list, download and delete files in `backend/recordings/`, with a minimal web UI. Uploads never overwrite an existing file, and file names cannot escape the recordings folder. Everything under **Features** below is the roadmap.
+
 ## Features
 
 ### 🎛️ Intelligent File Organization

@@ -1,65 +1,76 @@
-# sonusX32
+# 🎚️ sonusX32
 
-## How I got started with this project?
-As a sound engineer at my church, I have dealt with issues managing files related to the Behringer Digital Mixer X32. We used scenes and channels with a different church, and often faced issues such as accidentally deleting files that were not theirs or ours. Additionally, we have overwritten or lost files that were essential for our ministries. 
+**A shared home for your Behringer X32 scenes and recordings, where nobody can overwrite anybody else's work.**
 
-Therefore, I developed a sound engineering file management platform specialized for the Behringer X32. I named the system **sonusX32**, where **"Sonus" means sound in Latin**, and **"X32"** comes from the Behringer X32 mixer.
+<p align="center">
+  <img src="docs/demo.gif" alt="Uploading a scene, being stopped from overwriting an existing one, then deleting a file" width="720">
+</p>
 
-## Run it
-Requires Node 18+.
+## 🎤 Why this exists
+
+I run sound at my church. Our X32 is shared with another congregation, and so are its scenes and channel presets. That sharing kept going wrong: someone deleted a file that wasn't theirs, a Sunday scene got saved over, a recording went missing right before it was needed.
+
+So I'm building **sonusX32**. *Sonus* is Latin for "sound", and the X32 is the mixer we're all trying not to step on each other's toes with.
+
+## ✨ What it does today
+
+| | |
+|---|---|
+| 📤 **Upload** | Drop a scene or recording on the page, or pick one. |
+| 🛡️ **No overwrites** | If the name is taken, the upload is refused and the original stays safe. |
+| 🎨 **Color-coded** | Scenes are blue, recordings are red, everything else is amber. |
+| ⬇️ **Download** | Click a file name to grab it. |
+| 🗑️ **Delete** | Asks first, and only ever touches files inside the recordings folder. |
+| 🌙 **Anywhere** | Light and dark mode, and it works on a phone at the sound desk. |
+
+<p align="center">
+  <img src="docs/screenshot-duplicate.png" alt="Upload refused because Sunday Worship.scn already exists" width="520">
+  &nbsp;
+  <img src="docs/screenshot-dark-mobile.png" alt="Dark mode on a phone" width="200">
+</p>
+
+## 🚀 Run it
+
+You need [Node.js](https://nodejs.org) 18 or newer.
+
 ```sh
 npm install
-npm start      # http://localhost:5001 (PORT and RECORDINGS_DIR are configurable)
-npm test
+npm start          # open http://localhost:5001
+npm test           # 6 tests, about a second
 ```
-**Implemented today:** upload, list, download and delete files in `backend/recordings/`, with a minimal web UI. Uploads never overwrite an existing file, and file names cannot escape the recordings folder. Everything under **Features** below is the roadmap.
 
-## Features
+Files are stored in `backend/recordings/`. To change the port or the folder:
 
-### 🎛️ Intelligent File Organization
-- Categorize recordings by **date, event, scene, and channel settings**.
-- Create **customizable folder structures** to store recorded audio, scene files, and presets.
-- Implement **metadata tagging** for quick search and retrieval (e.g., “Sunday Worship”, “Choir Rehearsal”).
+```sh
+PORT=8080 RECORDINGS_DIR=/Volumes/ChurchDrive/x32 npm start
+```
 
-### 🔄 Automatic Scene Management for Church Events
-- Schedule **automatic scene switching** based on church events.
-- Sync with **Google Calendar or internal scheduling system** to load the correct scenes at the right time.
-- Assign **pre-configured scenes for different events** (e.g., Sermon, Choir, Wedding, Youth Service).
+Anyone on the same network can open `http://<this-computer's-IP>:5001`, so the booth laptop, the pastor's tablet and your phone all see the same files.
 
-### 💾 Secure & Redundant Storage System
-- **Auto-save** and **auto-backup** to prevent accidental data loss.
-- Support for **cloud storage integration** (Google Drive, Dropbox, OneDrive).
-- **Version history** to revert to previous scene settings if needed.
+> ⚠️ There's no login yet. Keep it on your church network and don't expose it to the internet.
 
-### 🔍 Quick Access & Retrieval
-- Search recordings, scenes, and channels by **keywords, tags, or date**.
-- **Graphical interface** showing a timeline of past recordings and scene changes.
-- One-click **restore** previous settings if something goes wrong.
+## 🗺️ Roadmap
 
-### 🖥️ User-Friendly Interface
-- **Drag & drop** functionality to move recordings and scenes between folders.
-- **Color-coded interface** to differentiate between event types.
-- **Mobile and tablet compatibility** for quick access.
+What's planned, roughly in order:
 
-### 🎚️ Integration with Behringer X32
-- Direct **import/export** of scenes and settings.
-- Support for **remote control** via **Behringer X32 Edit Software API**.
-- Automated file renaming based on **event type and date**.
+- [x] Upload, list, download and delete, with no overwrites
+- [ ] 🏷️ Tags and search ("Sunday Worship", "Choir Rehearsal", "Youth Night")
+- [ ] 📁 Folders per congregation or ministry, so each group sees its own files first
+- [ ] 🕓 Version history: keep old copies of a scene and restore one with a click
+- [ ] 🔐 Simple logins, so every change shows who made it
+- [ ] 💾 Automatic backups to an external drive or Google Drive
+- [ ] 🎛️ Talk to the X32 directly over OSC to pull and push scenes
+- [ ] 📅 Calendar-driven scene changes: load the right scene before each service
+- [ ] 🔔 Alerts when storage runs low or a scene was never saved
 
-### ⏳ Live Event Automation & Alerts
-- Auto-adjust mixer settings based on **pre-set preferences for specific speakers or bands**.
-- Send **alerts** if a scene is not saved or if storage is running low.
+## 🧰 How it's built
 
-## 📌 Tech Stack
-- **Frontend**: Electron.js (for a desktop app), React (for web-based control)
-- **Backend**: Node.js, Python (for automation & API integration)
-- **Database**: SQLite / PostgreSQL (for storing metadata and schedules)
-- **Storage**: Local storage with cloud backup options
-- **API Integration**: Behringer X32 OSC API for real-time communication
+Deliberately small, so it's easy to keep running:
 
-## 🚀 Next Steps
-- Would you like this as a **desktop-only program**, or should it also support **web & mobile access**?
-- Would you prefer an **offline solution**, or should it **integrate with cloud storage**?
-- Any specific **automation features** you'd like to include for different church events?
+- `backend/index.js`: an [Express](https://expressjs.com) server, about 70 lines
+- `backend/public/index.html`: the whole UI in one file, with no build step
+- `backend/test.js`: tests using Node's built-in test runner
 
-Let's build **sonusX32** into an intuitive, powerful, and **reliable file management system** for sound engineers! 🎶
+---
+
+Made for the people in the booth. 🙏
